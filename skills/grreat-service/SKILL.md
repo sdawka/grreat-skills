@@ -22,7 +22,9 @@ Read the workspace before writing. Use the smallest bounded query that establish
 
 `grreat:read` permits workspace reads and proposal inspection. `grreat:write` permits direct writes plus proposal submission, approval, and rejection in the authenticated agent's own workspace. There is no separate approval scope.
 
-Direct writes are appropriate for clearly requested, reversible scoped changes. Use proposals when the change needs review or when the caller asks for a proposed plan. A write-capable agent may decide any proposal in its own workspace, but approval must echo the proposal's exact `fingerprint` and `base_versions`. Stale, replayed, terminal, malformed, or cross-workspace requests must be surfaced as conflicts, not silently retried or broadened.
+Direct writes are appropriate for clearly requested, reversible scoped changes. Use proposals when the change needs review or when the caller asks for a proposed plan. A write-capable agent may decide any proposal in its own workspace. Proposal responses use camelCase fields such as `proposalId` and `baseVersions`; approval requests send those values as `proposal_id` and `expected_base_versions` alongside the exact `fingerprint`.
+
+A matching submission or decision retry returns the stored proposal result and is successful. Reusing a proposal ID with a different command fingerprint or proposer is a conflict, as are stale versions, an opposite terminal decision, malformed input, or a workspace mismatch. Surface those conflicts instead of silently retrying with changed identity or content.
 
 An approved proposal keeps its proposer as the domain mutation actor. The agent that approves or rejects it is recorded separately as the decision actor. Report that distinction in user-facing summaries.
 

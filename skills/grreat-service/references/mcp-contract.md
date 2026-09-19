@@ -15,15 +15,15 @@ The service is OAuth-protected and workspace-scoped. The client discovers the is
 
 ## Proposal lifecycle
 
-`list_proposals` and `get_proposal` return workspace-scoped proposal records. A proposal includes a stable `proposal_id`, canonical `command`, policy classification, `fingerprint`, `base_versions`, proposer attribution, status, and any terminal receipt or conflict.
+`list_proposals` and `get_proposal` return workspace-scoped proposal records. Response objects use camelCase: a proposal includes a stable `proposalId`, canonical `command`, policy classification, `fingerprint`, `baseVersions`, proposer attribution, status, and any terminal result. An oversized terminal result is returned in a bounded form with `truncated: true`, compact record/relation references, and the complete receipt and actor attribution.
 
-`submit_proposal` accepts a bounded atomic `apply_batch` command and optional provenance/evidence. The request is idempotent by `request_id` and `proposal_id`. The service either returns a pending proposal for confirmation or an auto-approved terminal result when the deterministic policy allows it.
+`submit_proposal` accepts a bounded atomic `apply_batch` command of at most 25 commands and optional provenance/evidence. Request arguments use snake_case, including `request_id` and `proposal_id`. A retry with the same proposal ID, canonical command fingerprint, and authenticated proposer returns the stored proposal. Reusing the proposal ID with changed content or a different proposer returns `PROPOSAL_REUSE`. The service either returns a pending proposal for confirmation or an auto-approved terminal result when the deterministic policy allows it.
 
-`approve_proposal` requires the proposal id, exact fingerprint, exact base versions, and a fresh request id. The mutation is carried out as the proposer; the approving authenticated agent is stored as the separate decision actor.
+`approve_proposal` sends `proposal_id`, the exact `expected_fingerprint`, the returned `baseVersions` as `expected_base_versions`, and a request id. The mutation is carried out as the proposer; the approving authenticated agent is stored as the separate decision actor. A matching retry of an approved proposal returns the stored terminal result.
 
-`reject_proposal` requires the proposal id, exact fingerprint, and a fresh request id; an optional reason is recorded with the rejecting decision actor.
+`reject_proposal` sends `proposal_id`, `expected_fingerprint`, and a request id; an optional reason is recorded with the rejecting decision actor. A matching retry of a rejected proposal returns the stored result.
 
-Never treat a duplicate, stale, fingerprint mismatch, already-terminal proposal, or workspace mismatch as success. Return the conflict to the caller and re-read the proposal before deciding what to do next.
+Do not confuse a matching idempotent retry with a conflict. Return stale-version, fingerprint, proposal-ID-reuse, opposite terminal-decision, and workspace conflicts to the caller, then re-read the proposal before deciding what to do next.
 
 ## Scope of authority
 
