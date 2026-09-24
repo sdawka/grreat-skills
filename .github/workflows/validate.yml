@@ -1,0 +1,20 @@
+name: Validate skills
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  grreat-local-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Initialize and validate a standalone vault
+        run: |
+          node skills/grreat/project.mjs init --title "Validation" --directory "$RUNNER_TEMP/grreat-vault"
+          node skills/grreat/validate.mjs "$RUNNER_TEMP/grreat-vault"
+          node skills/grreat/project.mjs context --directory "$RUNNER_TEMP/grreat-vault"

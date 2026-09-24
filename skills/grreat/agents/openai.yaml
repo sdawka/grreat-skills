@@ -1,0 +1,4 @@
+interface:
+  display_name: "GRREAT"
+  short_description: "Plan, execute, and resume with linked project memory"
+  default_prompt: "Use $grreat to adopt this ongoing project, preserve its plan, and track execution in a linked Markdown vault."
