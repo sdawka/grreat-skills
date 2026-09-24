@@ -1,8 +1,16 @@
 # GRREAT skills
 
-Public, versioned Agent Skills for connecting an agent to GRREAT through its canonical MCP/RPC service.
+Public, versioned Agent Skills for durable, local-first project work and optional GRREAT service access.
 
 ## Install
+
+```sh
+npx skills add sdawka/grreat-skills --skill grreat -g -y
+```
+
+`grreat` is the default skill. It keeps Goals, Research, Roadmap, Execution, Analysis, and Time in a Markdown vault in your project. It works locally with Node.js 22 or newer and needs no account, service, or npm install.
+
+Use the optional `grreat-service` skill when you want an authenticated connection to a GRREAT workspace:
 
 ```sh
 npx skills add sdawka/grreat-skills --skill grreat-service -g -y
@@ -14,6 +22,7 @@ The package is intentionally generic: it contains no account data, workspace exp
 
 ## Skill
 
+- `skills/grreat/` — local Markdown workflow, version 1.2.0.
 - `skills/grreat-service/` — GRREAT MCP/RPC connection and operation contract.
 
-The live service controls authorization. The package is not a substitute for OAuth consent, token handling, or server-side scope checks.
+The live service controls authorization. The service skill is not a substitute for OAuth consent, token handling, or server-side scope checks.
