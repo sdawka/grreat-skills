@@ -47,14 +47,28 @@ export async function readAccessToken({
   }
 }
 
+function quoteSecurityArgument(value) {
+  if (typeof value !== 'string' || /[\r\n\0]/u.test(value)) {
+    throw new TypeError('Keychain values must be single-line strings');
+  }
+  return `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+}
+
 export async function storeAccessToken(token, {
   service = KEYCHAIN_SERVICE,
   run = defaultRun,
 } = {}) {
   if (typeof token !== 'string' || !token.trim()) throw new TypeError('A non-empty access token is required');
-  const secret = Buffer.from(token.trim(), 'utf8');
+  // Interactive command mode accepts a complete command on stdin. Supplying
+  // only a trailing -w instead prompts again through /dev/tty, ignoring stdin.
+  // Keep the password inside the pipe, never in OS process arguments.
+  const command = `add-generic-password -U -s ${quoteSecurityArgument(service)} -a ${quoteSecurityArgument(KEYCHAIN_ACCOUNT)} -w ${quoteSecurityArgument(token.trim())}\n`;
+  const secret = Buffer.from(command, 'utf8');
   try {
-    await run(['add-generic-password', '-U', '-s', service, '-a', KEYCHAIN_ACCOUNT, '-w'], { input: secret });
+    await run(['-i', '-q'], { input: secret });
+  } catch {
+    // security diagnostics can contain its stdin command; do not expose them.
+    throw new Error('Unable to store the GRREAT access token in macOS Keychain.');
   } finally {
     secret.fill(0);
   }

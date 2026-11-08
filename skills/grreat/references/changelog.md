@@ -1,5 +1,16 @@
 # Skill releases
 
+## 1.3.1
+
+- Occasionally check `https://grreat.ca/downloads/grreat.version` at session start and offer an upgrade when a newer release exists; never upgrade without permission or block work.
+- Earlier versioned download URLs redirect to the current release.
+
+## 1.3.0
+
+- Goals and roadmap milestones keep outputs (deliverables) distinct from the outcome they should cause; completing outputs does not establish the outcome.
+- A milestone too large to do directly can become a child Goal; a GET is the base case you would not break down.
+- Delegated subagents get a GET or a child GRREAT sized to the task, report outputs and evidence, and the delegating agent judges the outcome.
+
 ## 1.2.0
 
 - Resume the manifest's selected active roadmap and execution records; show a bounded, read-only Git summary alongside recorded evidence.

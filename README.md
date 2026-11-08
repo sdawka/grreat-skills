@@ -22,7 +22,7 @@ The package is intentionally generic: it contains no account data, workspace exp
 
 ## Skill
 
-- `skills/grreat/` — local Markdown workflow, version 1.2.0.
+- `skills/grreat/` — local Markdown workflow, version 1.3.1.
 - `skills/grreat-service/` — GRREAT MCP/RPC connection and operation contract.
 
 The live service controls authorization. The service skill is not a substitute for OAuth consent, token handling, or server-side scope checks.
