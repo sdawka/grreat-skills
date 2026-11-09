@@ -48,6 +48,16 @@ const SYNC_CLEAR_VALUES = {
   },
   obverse: '',
 };
+// Native fields become sync-owned only after a canonical payload actually sends them.
+// Legacy full syncedPayload values cannot prove ownership of app-authored fields.
+const NATIVE_CLEAR_VALUES = {
+  goal: { outcome: '', why: '', else: '', successSignals: [] },
+  research: { sourceUrl: '', tags: [] },
+  roadmap: { intendedOutcome: '', completionCriteria: [] },
+  execution: { intendedResult: '', completionCriteria: [] },
+  analysis: { outcome: '' },
+};
+
 const CONFLICT_CODES = new Set([
   'VERSION_CONFLICT',
   'REQUEST_REUSE',
@@ -312,9 +322,88 @@ function relationKindFor(record, parentSection) {
   return parentSection === 'goal' ? 'belongs-to' : 'related-to';
 }
 
+
+/** Extract only explicit field labels/sections; unclassified prose remains Notes. */
+function nativeFieldsFromBody(body, section) {
+  const lines = body.split('\n');
+  const removed = new Set();
+  const visible = [];
+  let fence;
+  let historicalDepth;
+  for (const line of lines) {
+    const marker = line.match(/^\s*(`{3,}|~{3,})(.*)$/u);
+    const heading = !fence && line.match(/^\s*(#{1,6})\s+(.+)$/u);
+    if (heading && historicalDepth && heading[1].length <= historicalDepth) historicalDepth = undefined;
+    if (heading && !historicalDepth && /^(?:historical|history|previous|archived)\b/iu.test(heading[2])) historicalDepth = heading[1].length;
+    visible.push(!fence && !marker && !historicalDepth);
+    if (marker && !fence) fence = { char: marker[1][0], length: marker[1].length };
+    else if (marker && marker[1][0] === fence?.char && marker[1].length >= fence.length && !marker[2].trim()) fence = undefined;
+  }
+  function take(labels, { array = false, convert = (value) => value } = {}) {
+    const wanted = new Set(labels.map((label) => label.toLowerCase()));
+    for (let i = 0; i < lines.length; i += 1) {
+      if (!visible[i]) continue;
+      const label = lines[i].match(/^\s*(?:[-*+]\s+)?(?:\*\*)?([^:]+?)(?:\*\*)?:\s*(.*)$/u);
+      const heading = lines[i].match(/^\s*#{1,6}\s+(.+?)\s*#*\s*$/u);
+      if (!wanted.has((label?.[1] ?? heading?.[1] ?? '').trim().toLowerCase())) continue;
+      const indexes = [i];
+      const values = [];
+      if (label) {
+        values.push(label[2].trim());
+        for (let j = i + 1; j < lines.length && visible[j] && /^\s{2,}\S/u.test(lines[j]) && !/^\s*[-*+]\s/u.test(lines[j]); j += 1) {
+          values[0] += '\n' + lines[j].trim();
+          indexes.push(j);
+        }
+      } else {
+        for (let j = i + 1; j < lines.length && visible[j] && !/^\s*#/u.test(lines[j]); j += 1) {
+          if (!array && /^\s*(?:[-*+]\s+)?(?:\*\*)?[A-Za-z][^:]*?(?:\*\*)?:\s*\S/u.test(lines[j])) break;
+          const item = lines[j].match(/^\s*[-*+]\s+(.+)$/u);
+          if (array && item) { values.push(item[1]); indexes.push(j); }
+          else if (!array && lines[j].trim()) { values.push(lines[j].trim()); indexes.push(j); }
+        }
+      }
+      const raw = array ? [...new Set(values.filter(Boolean))] : values.join('\n').trim();
+      if ((array && raw.length === 0) || (!array && !raw)) continue;
+      const converted = convert(raw);
+      if (converted === undefined) continue;
+      indexes.forEach((index) => removed.add(index));
+      return converted;
+    }
+    return undefined;
+  }
+  const fields = {};
+  function field(key, labels, options) {
+    const value = take(labels, options);
+    if (value !== undefined) fields[key] = value;
+  }
+  if (section === 'goal') {
+    field('outcome', ['Outcome']);
+    field('why', ['Why']);
+    field('else', ['Else']);
+    field('successSignals', ['Success signals', 'Acceptance'], { array: true });
+  } else if (section === 'roadmap') {
+    field('intendedOutcome', ['Intended outcome', 'Work']);
+    field('completionCriteria', ['Completion criteria', 'Acceptance'], { array: true });
+  } else if (section === 'execution') {
+    field('intendedResult', ['Intended result', 'Next action', 'Action and dependency']);
+    field('completionCriteria', ['Completion criteria', 'Done when'], { array: true });
+  } else if (section === 'research') {
+    field('sourceUrl', ['Source URL'], { convert: (value) => {
+      try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? value : undefined; }
+      catch { return undefined; }
+    } });
+    field('tags', ['Tags'], { convert: (value) => [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))] });
+  } else if (section === 'analysis') {
+    field('outcome', ['Outcome', 'Working conclusion']);
+
+  }
+  return { fields, body: removed.size ? lines.filter((_, index) => !removed.has(index)).join('\n').replace(/\n{3,}/gu, '\n\n').trim() : body };
+}
+
 function payloadForRecord(record, section, obverse) {
-  const payload = { title: record.title || record.id };
-  if (record.body) payload.body = record.body;
+  const mapped = nativeFieldsFromBody(record.body || '', section);
+  const payload = { title: record.title || record.id, ...mapped.fields };
+  if (mapped.body) payload.body = mapped.body;
   if (section === 'goal') {
     payload.role = record.kind === 'north_star' || record.role === 'north_star' ? 'north_star' : 'goal';
     if (['project', 'program'].includes(record.kind)) payload.kind = record.kind;
@@ -334,6 +423,7 @@ function payloadForRecord(record, section, obverse) {
   else if (section === 'execution' && record.kind === 'execution_item') payload.kind = 'task';
   if (section === 'roadmap' && ['planned', 'active', 'complete', 'paused'].includes(record.status)) payload.status = record.status;
   if (section === 'execution' && ['todo', 'doing', 'done', 'blocked'].includes(record.status)) payload.status = record.status;
+  else if (section === 'execution' && record.status === 'active') payload.status = 'doing';
   if (section === 'time' && ['scheduled', 'cancelled'].includes(record.status)) payload.status = record.status;
   return payload;
 }
@@ -457,12 +547,16 @@ function clearValueFor(section, field) {
 function payloadPatchForRecord(record, remote) {
   const patch = { ...record.payload };
   const previousPayload = remote?.syncedPayload;
+
   for (const field of SYNC_OWNED_OPTIONAL_FIELDS[record.section] ?? []) {
     if (!(field in record.payload) &&
         (!previousPayload || typeof previousPayload !== 'object' || field in previousPayload)) {
       const clearValue = clearValueFor(record.section, field);
       if (clearValue !== undefined) patch[field] = clearValue;
     }
+  }
+  for (const [field, empty] of Object.entries(NATIVE_CLEAR_VALUES[record.section] ?? {})) {
+    if (!(field in record.payload) && remote?.ownedFields?.includes(field)) patch[field] = structuredClone(empty);
   }
   return patch;
 }
@@ -565,6 +659,7 @@ function installRecordResult(nextRecords, record, remote, receipt) {
     version: Number.isInteger(remote.version) ? remote.version : (prior.version ?? 1),
     digest: record.digest,
     contentDigest: contentDigest(record),
+    ownedFields: Object.keys(record.payload),
     syncedPayload: remote.payload && typeof remote.payload === 'object' ? structuredClone(remote.payload) : structuredClone(record.payload),
     syncedMetadata: remote.metadata && typeof remote.metadata === 'object' ? structuredClone(remote.metadata) : structuredClone(record.metadata ?? {}),
     ...(record.parent !== undefined ? { parentSourceId: record.parent ?? null } : {}),

@@ -2,7 +2,7 @@
 name: grreat
 description: "Plan, adopt, execute, and resume substantial projects with GRREAT. Use a linked Markdown vault for Goals, Research, Roadmap, Execution, Analysis, and Time; carry Plan-mode decisions into evidence-based execution and future sessions. Use when asked for GRREAT, adopting an ongoing project, or continuing a tracked goal. App sync and semantic search are optional."
 metadata:
-  version: "1.2.0"
+  version: "1.3.1"
 ---
 
 # GRREAT
@@ -27,9 +27,9 @@ For adoption or initialization, read [adopt.md](references/adopt.md). For note c
 
 In native Plan mode, use **Goals → Research → Roadmap** to develop the plan. Follow the host's mode restrictions: return the handoff in the conversation while writes are prohibited. Persist it as the first execution step once writes are allowed. This skill cannot switch modes. In normal mode, use the user's existing authorization without inventing a second approval step.
 
-- **Goals:** Desired outcome, motivation, scope, constraints, and observable success signals. Preserve the user's framing. Capture a condition that would invalidate the goal when meaningful; do not force a questionnaire.
+- **Goals:** Desired outcome and the specific outputs expected to produce it, kept distinct, plus motivation, scope, constraints, and observable success signals. Preserve the user's framing. Capture a condition that would invalidate the goal when meaningful; do not force a questionnaire.
 - **Research:** Findings with sources, questions that affect the approach, and explicit assumptions. Link evidence to the goal or milestone it informs.
-- **Roadmap:** Ordered milestones, dependencies, completion checks, and the first concrete action. Reuse an accepted plan rather than restarting it.
+- **Roadmap:** Ordered milestones, each with its outputs and intended outcome, dependencies, completion checks, and the first concrete action. Reuse an accepted plan rather than restarting it.
 
 The handoff records the goal, plan, assumptions, validation criteria, vault path, and next action. Carry the accepted completion criteria into the active Roadmap record so execution and review use the same definition of success. Small projects can use one goal and a short milestone list. Do not force nested goals, exhaustive research, or extra process to fill the template.
 
@@ -43,7 +43,7 @@ node /path/to/grreat/project.mjs context --directory docs/grreat
 
 Reconcile that record with the current files, branch, working tree, and relevant checks. If the manifest has stale focus references, reconcile them with the actual work before continuing. A different revision or dirty tree calls for inspection; note-only changes do not automatically invalidate earlier checks. Projects without Git still resume from their notes. Work on the next useful authorized action, then update at meaningful boundaries: completed work, a consequential finding, a failed check, a blocker, a decision, or a handoff.
 
-Use available subagents for independent research, implementation, or review when parallel work helps. Give each a bounded responsibility and clear file ownership. Keep one writer for shared state notes, integrate the results, and verify the combined change before recording completion.
+Use available subagents for independent research, implementation, or review when parallel work helps. Size each delegated goal to its task: a GET (the outcome it serves, the outputs it returns, and the check that proves them) for work it would not break down, or a full GRREAT, linked as a child of the current Goal, for work that needs its own research, roadmap, and review. Give each clear file ownership. Subagents report outputs and evidence; the delegating agent judges whether the outcome was reached. Keep one writer for shared state notes, integrate the results, and verify the combined change before recording completion.
 
 The ordinary update is **Now plus one journal entry**: record the work, evidence, and any consequential decision once in the dated journal; keep Now as the short current summary with a link to that evidence. Update Goals, Research, or Roadmap when their facts or direction change, not to echo the journal.
 
@@ -71,5 +71,9 @@ Validation checks the canonical protocol, current manifest focus, and linked in-
 ## Optional app connection
 
 Local planning and execution need no account or credentials. If the user wants the app mirror, read [sync.md](references/sync.md). Markdown stays authoritative; use the existing versioned direct-RPC sync. Never infer permission to upload notes merely from skill installation or adoption.
+
+## Staying current
+
+Every so often, at the start of a session rather than mid-task, compare this skill's `metadata.version` with `https://grreat.ca/downloads/grreat.version`. When a newer release exists, tell the user and summarize its release notes; upgrade only with their permission, by replacing this installed folder with the verified versioned archive. Skip the check when offline or when network access is not permitted; it must never block project work.
 
 See the [release notes](references/changelog.md) before upgrading. This skill consolidates the earlier `grreat-project` protocol and the linked-vault `grreat` workflow. Preserve existing IDs, manifests, and `.sync.json` checkpoints. Do not silently rewrite remote state, remove prior decisions, or replace project-specific conventions with new global rules.
