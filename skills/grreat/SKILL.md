@@ -2,7 +2,7 @@
 name: grreat
 description: "Plan, adopt, execute, and resume substantial projects with GRREAT. Use a linked Markdown vault for Goals, Research, Roadmap, Execution, Analysis, and Time; carry Plan-mode decisions into evidence-based execution and future sessions. Use when asked for GRREAT, adopting an ongoing project, or continuing a tracked goal. App sync and semantic search are optional."
 metadata:
-  version: "1.3.1"
+  version: "1.3.2"
 ---
 
 # GRREAT
