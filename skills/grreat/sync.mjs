@@ -51,9 +51,9 @@ const SYNC_CLEAR_VALUES = {
 // Native fields become sync-owned only after a canonical payload actually sends them.
 // Legacy full syncedPayload values cannot prove ownership of app-authored fields.
 const NATIVE_CLEAR_VALUES = {
-  goal: { outcome: '', why: '', else: '', successSignals: [] },
+  goal: { outcome: '', why: '', else: '', successSignals: [], outputs: [] },
   research: { sourceUrl: '', tags: [] },
-  roadmap: { intendedOutcome: '', completionCriteria: [] },
+  roadmap: { intendedOutcome: '', completionCriteria: [], outputs: [] },
   execution: { intendedResult: '', completionCriteria: [] },
   analysis: { outcome: '' },
 };
@@ -323,6 +323,28 @@ function relationKindFor(record, parentSection) {
 }
 
 
+/**
+ * `- [ ] Query letter — check: An agent replied` → a planned output; `[x]` marks it done.
+ * Ids derive from titles so an unchanged list syncs as an unchanged payload.
+ */
+function outputsFromItems(items) {
+  const seen = new Map();
+  return items.map((item) => {
+    const box = item.match(/^\[([ xX])\]\s+(.+)$/u);
+    const text = (box ? box[2] : item).trim();
+    const [title, check] = text.split(/\s+[—–-]\s+check:\s*/iu);
+    const slug = title.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/gu, '-').replace(/^-+|-+$/gu, '').slice(0, 60) || 'output';
+    const count = (seen.get(slug) ?? 0) + 1;
+    seen.set(slug, count);
+    return {
+      id: count === 1 ? `out-${slug}` : `out-${slug}-${count}`,
+      title: title.trim().slice(0, 500),
+      status: box && box[1] !== ' ' ? 'done' : 'planned',
+      ...(check?.trim() ? { check: check.trim().slice(0, 2000) } : {}),
+    };
+  }).filter((output) => output.title).slice(0, 100);
+}
+
 /** Extract only explicit field labels/sections; unclassified prose remains Notes. */
 function nativeFieldsFromBody(body, section) {
   const lines = body.split('\n');
@@ -381,9 +403,11 @@ function nativeFieldsFromBody(body, section) {
     field('why', ['Why']);
     field('else', ['Else']);
     field('successSignals', ['Success signals', 'Acceptance'], { array: true });
+    field('outputs', ['Outputs'], { array: true, convert: outputsFromItems });
   } else if (section === 'roadmap') {
     field('intendedOutcome', ['Intended outcome', 'Work']);
     field('completionCriteria', ['Completion criteria', 'Acceptance'], { array: true });
+    field('outputs', ['Outputs'], { array: true, convert: outputsFromItems });
   } else if (section === 'execution') {
     field('intendedResult', ['Intended result', 'Next action', 'Action and dependency']);
     field('completionCriteria', ['Completion criteria', 'Done when'], { array: true });

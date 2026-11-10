@@ -1,5 +1,9 @@
 # Skill releases
 
+## 1.3.2
+
+- App sync maps an **Outputs** list on Goals and Roadmap records to native outputs: `- [ ]` planned, `- [x]` done, optional `— check: …`. Removing the list clears outputs the sync owned.
+
 ## 1.3.1
 
 - Occasionally check `https://grreat.ca/downloads/grreat.version` at session start and offer an upgrade when a newer release exists; never upgrade without permission or block work.
